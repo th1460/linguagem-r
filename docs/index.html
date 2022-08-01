@@ -1,7 +1,13 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-  <meta charset="utf-8">
-  <meta name="generator" content="quarto-0.9.282">
+<script src="index_files/libs/clipboard/clipboard.min.js"></script>
+<script src="index_files/libs/quarto-html/tabby.min.js"></script>
+<script src="index_files/libs/quarto-html/popper.min.js"></script>
+<script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="index_files/libs/quarto-html/quarto-html.min.css" rel="stylesheet" data-mode="light">
+<link href="index_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.0.36">
 
   <meta name="author" content="Thiago Pires">
   <title>Linguagem R</title>
@@ -19,13 +25,6 @@
     ul.task-list{list-style: none;}
   </style>
   <link rel="stylesheet" href="index_files/libs/revealjs/dist/theme/quarto.css" id="theme">
-  <script src="index_files/libs/clipboard/clipboard.min.js"></script>
-  <script src="index_files/libs/quarto-html/tabby.min.js"></script>
-  <script src="index_files/libs/quarto-html/popper.min.js"></script>
-  <script src="index_files/libs/quarto-html/tippy.umd.min.js"></script>
-  <link href="index_files/libs/quarto-html/tippy.css" rel="stylesheet">
-  <link href="index_files/libs/quarto-html/quarto-html.min.css" rel="stylesheet">
-  <link id="quarto-text-highlighting-styles" href="index_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet">
   <link href="index_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="index_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="index_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -39,7 +38,7 @@
   }
 
   .callout.callout-style-simple { 
-    padding: 0em 0.7em;
+    padding: 0em 0.5em;
     border-left: solid #acacac .3rem;
     border-right: solid 1px silver;
     border-top: solid 1px silver;
@@ -150,8 +149,7 @@
     display: none !important;
   }
 
-  .callout.callout-captioned .callout-body > :last-child,
-  .callout.callout-captioned .callout-body > div > :last-child {
+  .callout.callout-captioned .callout-body > .callout-content > :last-child {
     margin-bottom: 0.5rem;
   }
 
@@ -316,7 +314,7 @@
     }
   </style>
 </head>
-<body>
+<body class="quarto-light">
   <div class="reveal">
     <div class="slides">
 
@@ -327,35 +325,8 @@
 
 <section id="thiago-pires" class="slide level2">
 <h2>Thiago Pires</h2>
-<div class="columns">
-<div class="column" style="width:40%;">
-<img class="rounded-corners" src="resources/images/avatar.jpeg">
-<p>
-Cientísta de dados (CIO/IBM)
-</p>
-</div><div class="column" style="width:60%;">
-<div class="vertical-center">
-<h3>
-Formação
-</h3>
-<ul style="list-style-type:square">
-<li>
-Estatístico (UERJ)
-</li>
-<li>
-MSc. Epidemiologia (ENSP/Fiocruz)
-</li>
-<li>
-DSc. Engenharia Biomédica (COPPE/UFRJ)
-</li>
-</ul>
-</div>
-</div>
-</div>
-</section>
-<section id="test" class="slide level2">
-<h2>Test</h2>
-<p>dsds</p>
+<iframe data-src="resources/card.html" height="100%">
+</iframe>
 <div class="footer footer-default">
 <p><a href="https://github.com/th1460/linguagem-r/">github.com/th1460/linguagem-r</a></p>
 </div>
@@ -366,12 +337,13 @@ DSc. Engenharia Biomédica (COPPE/UFRJ)
   <script>window.backupDefine = window.define; window.define = undefined;</script>
   <script src="index_files/libs/revealjs/dist/reveal.js"></script>
   <!-- reveal.js plugins -->
-    <script src="index_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
-    <script src="index_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
-    <script src="index_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
-    <script src="index_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
-    <script src="index_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  <script src="index_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="index_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="index_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="index_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="index_files/libs/revealjs/plugin/quarto-support/support.js"></script>
   
+
   <script src="index_files/libs/revealjs/plugin/notes/notes.js"></script>
   <script src="index_files/libs/revealjs/plugin/search/search.js"></script>
   <script src="index_files/libs/revealjs/plugin/zoom/zoom.js"></script>
@@ -570,8 +542,26 @@ DSc. Engenharia Biomédica (COPPE/UFRJ)
         ]
       });
     </script>
-    <script type="application/javascript">
+    <script id="quarto-html-after-body" type="application/javascript">
     window.document.addEventListener("DOMContentLoaded", function (event) {
+      const toggleBodyColorMode = (bsSheetEl) => {
+        const mode = bsSheetEl.getAttribute("data-mode");
+        const bodyEl = window.document.querySelector("body");
+        if (mode === "dark") {
+          bodyEl.classList.add("quarto-dark");
+          bodyEl.classList.remove("quarto-light");
+        } else {
+          bodyEl.classList.add("quarto-light");
+          bodyEl.classList.remove("quarto-dark");
+        }
+      }
+      const toggleBodyColorPrimary = () => {
+        const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+        if (bsSheetEl) {
+          toggleBodyColorMode(bsSheetEl);
+        }
+      }
+      toggleBodyColorPrimary();  
       const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
       tabsets.forEach(function(tabset) {
         const tabby = new Tabby('#' + tabset.id);

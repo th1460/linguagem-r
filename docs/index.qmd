@@ -14,25 +14,3 @@ format:
 
 ## Thiago Pires
 
-:::: {.columns}
-
-::: {.column width="40%"}
-<img class="rounded-corners" src="resources/images/avatar.jpeg"/>
-<p>Cientísta de dados (CIO/IBM)</p>
-:::
-
-::: {.column width="60%"}
-<div class="vertical-center">
-<h3>Formação</h3>
-<ul style="list-style-type:square">
-<li>Estatístico (UERJ)</li>
-<li>MSc. Epidemiologia (ENSP/Fiocruz)</li>
-<li>DSc. Engenharia Biomédica (COPPE/UFRJ)</li>
-</ul>
-</div>
-:::
-
-::::
-
-## Test
-
