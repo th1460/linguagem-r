@@ -11,7 +11,7 @@ $body-bg: #fff !default;
 $body-color: #000 !default;
 $link-color: #00008b !default;
 $code-block-bg: #f2f2f2;
-$code-block-font-size: 0.7em;
+$code-block-font-size: 0.5em;
 
 /*-- scss:rules --*/
 
@@ -23,10 +23,6 @@ $code-block-font-size: 0.7em;
 .author, .date {
   font-size: 70px;
   color: white;
-}
-
-img.rounded-corners {
-  border-radius: 50%;
 }
 
 .info-box {
@@ -41,11 +37,20 @@ img.rounded-corners {
   box-shadow: 0px 10px 20px -10px rgb(0 0 0 / 75%);
 }
 
-.vertical-center {
-  margin: 50px;
-  position: absolute;
-  top: 50%;
-  -ms-transform: translateY(-50%);
-  transform: translateY(-50%);
+ul li {
+  list-style-type: square;
+  color: darkblue;
 }
 
+img.rounded-corners {
+  border-radius: 50%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.column {
+  float: left;
+  padding: 10px;
+}

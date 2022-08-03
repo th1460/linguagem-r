@@ -14,3 +14,670 @@ format:
 
 ## Thiago Pires
 
+### Cientísta de Dados (CIO/IBM)
+
+:::: columns
+::: {.column}
+![](resources/images/avatar.jpeg){.rounded-corners .absolute left=5%}
+:::
+::: {.column}
+<h4>Formação:</h4><br>
+<ul>
+<li>Estatística (UERJ)</li>
+<li>MSc. Epidemiologia (ENSP/FIOCRUZ)</li>
+<li>DSc. Engenharia Biomédica (COPPE/UFRJ)</li>
+</ul>
+:::
+::::
+
+## Linguagem R
+
+:::: columns
+::: {.column width="60%"}
+<ul>
+<li>A linguagem R foi derivada da linguagem S.</li>
+<li>Foi lançada em 1993 pelos dois estatísticos Ross Ihaka e Robert Gentleman da Universidade de Auckland, Nova Zelândia</li>
+<li>Atualmente na versão 4.2</li>
+</ul>
+
+![](resources/images/r-logo.png){.absolute width="15%" left=15% top="70%"}
+:::
+
+::: {.column width="40%"}
+![](resources/images/ross-ihaka.jpeg){.absolute width="35%" left=60% top="1%"}
+![](resources/images/robert-gentleman.jpeg){.absolute width="27%" left=60% top="45%"}
+:::
+::::
+
+## Linguagem R
+
+### Sintaxe
+
+:::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: true
+
+# x recebe um inteiro
+x <- 4
+
+# y recebe uma string
+y <- "versão"
+
+# Função que concatena
+paste(y, x)
+
+```
+
+```{r}
+#| echo: true
+
+# Criando funções
+f <- function(x) {
+    x^2
+}
+
+f(-4:4)
+
+# Utilizando pipe (versão 4.1+)
+-4:4 |> f()
+```
+:::
+::: {.column width="50%"}
+```{r}
+#| echo: true
+
+# Trabalhando com dados
+dados <- data.frame(x = c(4, 3, 5),
+                    y = letters[3:5])
+dados
+
+# Criando variáveis
+dados$z <- dados$x |> f()
+dados
+
+# Calculando medidas
+dados$z |> mean()
+```
+:::
+::::
+
+## Linguagem R
+### Sintaxe
+
+:::: columns
+::: {.column width="50%"}
+```{r}
+#| echo: true
+
+# Criando listas
+list(nome = c("Thiago", "Pires"), 
+     idade = 37,
+     skills = data.frame(skill = c("R", "Python"), 
+                         anos = c(15, 3)))
+```
+:::
+::: {.column width="50%"}
+```{r}
+#| echo: true
+
+# Criando gráficos
+x <- seq(-5, 5, .1)
+y <- f(x)
+
+plot(x, y, type = "l", col = "blue")
+```
+:::
+::::
+
+## [Tidyverse](https://www.tidyverse.org/) e [RStudio](https://www.rstudio.com/)
+
+:::: columns
+::: {.column width=50%}
+![](resources/images/tidyverse.png)
+:::
+::: {.column width=50%}
+
+> *`Tidyverse` é uma coleção de pacotes desenvolvidos pela RStudio e projetados para ciência de dados. Todos estes pacotes tentam compartilhar uma mesma sintaxe e estrutura de dados.*
+
+:::
+::::
+
+## `dplyr::` utilizado na manipulação de dados
+
+Média, desvio-padrão e N da idade, segundo sexo
+
+```{r}
+#| echo: true
+#| message: false
+#| output-location: column
+
+library(dplyr)
+
+titanic::titanic_train |> 
+    filter(Survived == 0) |> 
+    group_by(Sex) |> 
+    summarise(`Média` = mean(Age, na.rm = TRUE),
+              `Desvio-padrão` = sd(Age, na.rm = TRUE),
+              N = n()) |> 
+    mutate(across(c(2, 3), \(x) round(x, 1)))
+```
+
+Percentual de mortos, segundo sexo
+
+```{r}
+#| echo: true
+#| message: false
+#| output-location: column
+
+titanic::titanic_train |>
+    count(Survived, Sex) |>
+    group_by(Sex) |>
+    mutate(`%` = round(n/sum(n) * 100, 1)) |>
+    filter(Survived == 0)
+```
+
+## `ggplot2::` utilizado na visualização de dados
+
+Percentual de mortos e vivos, segundo sexo e classe
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 8
+#| fig-width: 12
+
+library(ggplot2)
+
+titanic::titanic_train |> 
+    ggplot() +
+    aes(Sex, ..count../sum(..count..), 
+        group = Survived, 
+        fill = as.factor(Survived)) +
+    geom_bar(position = "fill") +
+    facet_grid(~Pclass) +
+    scale_y_continuous(labels = scales::percent) +
+    scale_fill_manual(values = c("#003f9a", "#5099f4"), 
+                      labels = c("não", "sim")) +
+    labs(x = "Sexo", y = "", fill = "Sobreviveu") +
+    theme_light() + 
+    theme(text = element_text(size = 24))
+```
+
+## `stringr::` e `forcats::`
+
+```{r}
+#| echo: true
+#| output-location: column
+
+titanic::titanic_train$Name[4]
+```
+
+```{r}
+#| echo: true
+#| output-location: column
+
+titanic::titanic_train |> 
+    dplyr::mutate(
+        Title = Name |> 
+            stringr::str_extract(
+                "(?<=\\,\\s)(.*)(?=\\.)") |> 
+            forcats::fct_lump(n = 4)) |>  
+    ggplot() + 
+    aes(Title, Age) +
+    geom_boxplot() +
+    theme(text = element_text(size = 24))
+```
+
+## `readr::`, `tidyr::` e `lubridate::` para mais manipulações
+
+```{r}
+#| echo: true
+#| output-location: column
+
+url <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv"
+
+covid19 <- 
+    readr::read_csv(url) |> 
+    dplyr::filter(`Country/Region` == "Brazil") |> 
+    dplyr::select(- c(`Province/State`, Lat, Long))
+
+covid19
+```
+
+```{r}
+#| echo: true
+#| output-location: column
+
+covid19 <- 
+    covid19 |> 
+    tidyr::pivot_longer(!`Country/Region`, 
+                        names_to = "date", 
+                        values_to = "cumulate") |> 
+    dplyr::group_by(`Country/Region`) |> 
+    dplyr::mutate(date = lubridate::mdy(date),
+                  value = cumulate - dplyr::lag(cumulate)) |> 
+    dplyr::rename(country = `Country/Region`)
+
+covid19 |> head(5)
+```
+
+## `ggplot2::` na visualização de casos de COVID 19
+
+```{r}
+#| echo: true
+#| fig-height: 5
+#| fig-width: 16
+
+covid19 |> 
+    dplyr::mutate(moving_average = zoo::rollmean(value, 7, align = "right", fill = NA)) |> 
+    ggplot2::ggplot() +
+    ggplot2::aes(date, moving_average) +
+    ggplot2::geom_line() +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(x = "Data", 
+                  y = "Média móvel casos COVID 19") +
+    theme(text = element_text(size = 22))
+```
+
+## `plotly::` gráficos dinâmicos
+
+```{r}
+#| echo: true
+#| fig-height: 8
+#| fig-width: 16
+
+covid19 |> 
+    dplyr::mutate(moving_average = zoo::rollmean(value, 7, align = "right", fill = NA)) |> 
+    plotly::plot_ly(x = ~date, y = ~moving_average, 
+                    type = "scatter", mode = "lines") |> 
+    plotly::layout(xaxis = list(title = "Date"),
+                   yaxis = list(title = "Média móvel casos COVID 19"),
+                   font = list(size = 20), margin = list(t = 100)) |> 
+    plotly::rangeslider() |> 
+    widgetframe::frameWidget()
+```
+
+## `leaflet::` mapas dinâmicos
+
+```{r}
+#| echo: true
+#| output-location: column
+
+library(leaflet)
+
+locale <- dplyr::tibble(label = "IBM Hortolândia",
+                        lat = -22.8996401,
+                        lng = -47.2032362,
+                        logo = "https://www.ibm.com/brand/experience-guides/developer/8f4e3cc2b5d52354a6d43c8edba1e3c9/02_8-bar-reverse.svg")
+
+leaflet(options = list(closePopupOnClick = FALSE)) |> 
+    setView(lng = -46.9, 
+            lat = -22.8, 
+            zoom = 7) |> 
+    addTiles() |> 
+    addPopups(data = locale, 
+              ~lng, 
+              ~lat,
+              options = popupOptions(closeButton = FALSE), 
+              popup = ~paste("<img src=", 
+                             logo, "width=100%> <br>", 
+                             label))
+```
+
+## `leaflet::` rota do Titanic
+
+```{r}
+#| echo: true
+#| output-location: column
+
+events <- bind_rows(
+    tibble(location = "Southampton (10-04-1912)", 
+           lng = -1.4191, lat = 50.7894),
+    tibble(location = "Cherbourg (10-04-1912)", 
+           lng = -1.6109, lat = 49.6445),
+    tibble(location = "Queenstown (11-04-1912)", 
+           lng = -8.3211, lat = 51.8535),
+    tibble(location = "Naufrágio (14-04-1912)", 
+           lng = -49.9408, lat = 41.7258),
+    tibble(location = "New York", 
+           lng = -73.9655, lat = 40.6832))
+
+leaflet() |> 
+    setView(lng = -33.9, 
+            lat = 46.8, 
+            zoom = 3) |> 
+    addTiles() |> 
+    addCircleMarkers(data = events |> slice(1:3, 5), 
+                     label = ~location,
+                     color = c(rep("blue", 3), "green")) |> 
+    addMarkers(data = events |> slice(4), 
+               icon = list(
+                   iconUrl = "resources/images/sinking-ship.jpeg", 
+                   iconSize = c(50, 50)), 
+               label = ~location) |> 
+    addPolylines(data = events, ~lng, ~lat) |> 
+    widgetframe::frameWidget()
+```
+
+## `DBI::`, `RJDBC::` e `dbplyr::` conectando com o DB2 na IBM Cloud
+
+```{r}
+#| echo: true
+#| output-location: column
+
+library(dbplyr)
+
+# Ler variáveis de ambiente
+readRenviron("../.Renviron") 
+
+# Conexão com o DB2
+drv <-
+    RJDBC::JDBC("com.ibm.db2.jcc.DB2Driver", 
+                "../jars/db2jcc4.jar")
+
+host <- Sys.getenv("DB2_HOST")
+user <- Sys.getenv("DB2_USER")
+password <- Sys.getenv("DB2_PASSWORD")
+
+uri <- 
+    sprintf("jdbc:db2://%s/bludb:user=%s;password=%s;sslConnection=true;", 
+            host, user, password)
+
+db2 <-
+    DBI::dbConnect(drv, uri)
+
+# Enviando tabela para o DB2
+DBI::dbWriteTable(db2, "COVID19", 
+                  value = na.omit(covid19), 
+                  overwrite = TRUE)
+
+# Fazendo consulas no DB2
+dplyr::tbl(db2, "COVID19") |> 
+    dplyr::filter(dplyr::between(DATE, 
+                                 "2022-06-07", 
+                                 "2022-06-15")) |> 
+    dplyr::select(COUNTRY, DATE, VALUE)
+```
+
+## `tidymodels::` aprendizado supervisionado
+
+```{r}
+#| echo: true
+
+library(tidymodels)
+set.seed(555)
+
+titanic <- 
+    titanic::titanic_train |> 
+    dplyr::mutate(Pclass = factor(Pclass, labels = c("1st", "2nd", "3rd")),
+                  Survived = factor(Survived, labels = c("não", "sim")))
+
+# Separar 3/4 dos dados para treino 
+data_split <- 
+    initial_split(titanic, prop = 3/4)
+
+train_data <- training(data_split)
+test_data  <- testing(data_split)
+
+# Ajuste do modelo
+lr_mod <- 
+    logistic_reg() |>  
+    set_engine("glm")
+
+lr_fit <- 
+    lr_mod |>  
+    fit(Survived ~ Sex + Pclass, data = train_data)
+
+lr_fit |> broom::tidy()
+```
+
+## `tidymodels::` visualizando o modelo
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 6
+
+newdata <- 
+    expand.grid(Pclass = c("1st", "2nd", "3rd"),
+                Sex = c("male", "female"))
+pihat <- 
+    (lr_fit |> predict(newdata, type = "prob")) |> 
+    pull(.pred_sim)
+
+newdata |> mutate(Pihat = pihat) |>  
+    ggplot(aes(Sex, Pihat, 
+               group = Pclass, 
+               colour = Pclass)) + 
+    geom_line() + geom_point() +
+    labs(x = "Sex", y = expression(pi(Survived == sim)), 
+         colour = "Ticket Class") +
+    theme_minimal() +
+    theme(text = element_text(size = 22))
+```
+
+## `tidymodels::` avaliando o modelo
+
+```{r}
+#| echo: true
+#| output-location: column
+
+measure <- function(data) {
+    
+    data |> 
+        accuracy(truth = Survived, .pred_class) |>  
+        
+        bind_rows(
+            data |>  
+                f_meas(truth = Survived, .pred_class))
+}
+
+predict(lr_fit, test_data) |> 
+    bind_cols(predict(lr_fit, 
+                      test_data, type = "prob")) |> 
+    bind_cols(test_data |>  select(Survived)) |> 
+    measure()
+
+```
+
+## `pins::` versionando recursos no cloud object storage (COS) na IBM Cloud
+
+Versionando o modelo selecionado para a predição da probabilidade de sobreviver ao desastre do titanic.
+
+```{r}
+#| echo: true
+
+# Obtendo o modelo
+saved_lr_fit <- tidypredict::parse_model(lr_fit)
+
+# Conexão com o COS
+board <- pins::board_s3(bucket = Sys.getenv("COS_BUCKET"),
+                        region = Sys.getenv("COS_REGION"),
+                        access_key = Sys.getenv("COS_ACCESS_KEY_ID"),
+                        secret_access_key = Sys.getenv("COS_SECRET_ACCESS_KEY"),
+                        endpoint = Sys.getenv("COS_ENDPOINT"))
+```
+
+```{r eval=FALSE}
+#| echo: true
+
+# Salvando o modelo
+board |> pins::pin_write(saved_lr_fit, name = "titanic-model")
+```
+
+Lendo o modelo do COS e fazendo a predição
+
+```{r}
+#| echo: true
+
+model <- board |> pins::pin_read("titanic-model")
+input <- data.frame(Sex = "male", Pclass = "3rd")
+pred <- tidypredict::tidypredict_to_column(input, model)
+
+pred
+```
+
+## `plumber::` criando api
+
+```{r eval=FALSE}
+#| echo: true
+
+# plumber.R
+
+#* @apiTitle Prediction Survived in Titanic Disaster
+
+#* @param sex Sex
+#* @param pclass Class
+#* @post /predict
+function(sex, pclass) {
+    
+    board <- pins::board_s3(bucket = Sys.getenv("COS_BUCKET"),
+                            region = Sys.getenv("COS_REGION"),
+                            access_key = Sys.getenv("COS_ACCESS_KEY_ID"),
+                            secret_access_key = Sys.getenv("COS_SECRET_ACCESS_KEY"),
+                            endpoint = Sys.getenv("COS_ENDPOINT"))
+    model <- board |> pins::pin_read("titanic-model")
+    input <- data.frame(Sex = sex, Pclass = pclass)
+    pred <- tidypredict::tidypredict_to_column(input, model)
+    
+    return(pred)
+    
+}
+
+```
+
+Executando a api
+
+```{r eval=FALSE}
+#| echo: true
+
+plumber::pr_run(plumber::pr("R/plumber.R"), host = "0.0.0.0", port = 8080)
+```
+
+## `httr::` fazendo requisições
+
+```{r eval=FALSE}
+#| echo: true
+
+"http://localhost:8080/predict" |> 
+    httr::POST(body = list(sex = "female", pclass = "1st"), encode = "json") |>
+    httr::content() |> 
+    jsonlite::toJSON(pretty = TRUE,
+                     auto_unbox = TRUE)
+```
+
+```
+[
+{
+"Sex": "female",
+"Pclass": "1st",
+"fit": 0.9097
+}
+]
+```
+
+```{r eval=FALSE}
+#| echo: true
+
+"http://localhost:8080/predict" |> 
+    httr::POST(body = list(sex = "male", pclass = "3rd"), encode = "json") |>
+    httr::content() |> 
+    jsonlite::toJSON(pretty = TRUE,
+                     auto_unbox = TRUE)
+```
+
+```
+[
+{
+"Sex": "male",
+"Pclass": "3rd",
+"fit": 0.082
+}
+] 
+```
+
+## `shiny::` criando aplicações web
+
+```{r eval=FALSE}
+#| echo: true
+
+library(shiny)
+
+ui <- fluidPage(
+    h1("Olá Shiny!")
+    
+)
+
+server <- function(input, output, session) {
+    
+}
+
+shinyApp(ui, server)
+```
+
+## `shiny::` obtendo preço de ações
+
+:::: columns
+::: {.column width="45%"}
+![](resources/images/stock-price-app.png){width="70%"}
+:::
+::: {.column width="55%"}
+```{r eval=FALSE}
+#| echo: true
+
+library(shiny)
+library(shinythemes)
+
+source("dataStocks.R")
+
+start_value <- Sys.Date() - 31
+end_value <- Sys.Date()
+
+ui <- fluidPage(
+    theme = shinytheme("sandstone"),
+    navbarPage("STOCK PRICE"),
+    sidebarLayout(
+        sidebarPanel(
+            textInput("code", "Stock code", value = "PETR4.SA"),
+            dateRangeInput("date", "Date", 
+                           start = start_value,
+                           end = end_value)
+        ),
+        
+        mainPanel(
+            plotly::plotlyOutput("plot")
+        )
+    )
+)
+
+server <- function(input, output, session) {
+    
+    data_stock <- reactive({
+        
+        validate(
+            need(input$code, "Please type a stock code!"),
+            need(input$date[1], "Please choose a start date!"),
+            need(input$date[2], "Please choose a end date!"))
+        
+        dataStocks(input$code, input$date[1], input$date[2])
+    })
+    
+    output$plot <- plotly::renderPlotly({
+        plotly::plot_ly(data_stock(), 
+                        x = ~Date, 
+                        y = ~Adjusted, 
+                        color = "orange",
+                        mode = "lines",
+                        type = "scatter") |> 
+            plotly::rangeslider()
+    })
+    
+}
+
+shinyApp(ui, server)
+```
+:::
+::::
+
+## `tensorflow::` deep learning
