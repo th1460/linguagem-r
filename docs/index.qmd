@@ -812,3 +812,19 @@ results[c("Sex", "Pclass", "fit")] |>
 ::::
 
 ## `tensorflow::` deep learning
+
+## Linguagem R testada com outros recursos da IBM Cloud
+
+<ul>
+<li>Kubernetes/Openshift</li>
+<li>Code Engine</li>
+<li>Cloud Pak for Data</li>
+<li>App ID</li>
+</ul>
+
+## Projetos pessoais com R
+
+<ul>
+<li>Autenticação de aplicações shiny com App ID: [github.com/IBM/AppIdR](https://github.com/IBM/AppIdR)</li>
+<li>Autenticação de aplicações shiny com W3ID: [github.ibm.com/Thiago-Pires/w3idr](https://github.ibm.com/Thiago-Pires/w3idr)</li>
+</ul>
