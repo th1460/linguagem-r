@@ -803,13 +803,107 @@ results[c("Sex", "Pclass", "fit")] |>
 
 ```
 {
-  "Sex": "male",
-  "Pclass": "3rd",
-  "fit": 0.082
+"Sex": "male",
+"Pclass": "3rd",
+"fit": 0.082
 } 
 ```
 :::
 ::::
+
+## `rayshader::` mapas em 3D
+
+```{r}
+#| echo: true
+
+# Load elevation data
+elev_file <- "../data/rj.tif"
+elev_img <- raster::raster(elev_file)
+elev_matrix <- 
+    matrix(raster::extract(elev_img, 
+                           raster::extent(elev_img), 
+                           buffer = 1000), 
+           nrow = ncol(elev_img), 
+           ncol = nrow(elev_img)
+    )
+```
+
+```{r}
+#| echo: true
+#| output-location: column
+
+# Define bounding box with longitude/latitude coordinates
+bbox <- list(
+    p2 = list(long = -43.2328217452992, lat = -22.99560928307949),
+    p1 = list(long = -43.133008448808454, lat = -22.930329210944166)
+)
+
+leaflet::leaflet() |> 
+    leaflet::addTiles() |> 
+    leaflet::addRectangles(
+        lng1 = bbox$p1$long, lat1 = bbox$p1$lat,
+        lng2 = bbox$p2$long, lat2 = bbox$p2$lat,
+        fillColor = "transparent"
+    ) |> 
+    leaflet::fitBounds(
+        lng1 = bbox$p1$long, lat1 = bbox$p1$lat,
+        lng2 = bbox$p2$long, lat2 = bbox$p2$lat,
+    )
+```
+
+## `rayshader::` mapas em 3D
+
+```{r}
+#| echo: true
+#| output-location: column
+
+source("../src/define_image_size.R")
+source("../src/get_arcgis_map_image.R")
+
+image_size <- define_image_size(bbox, major_dim = 600)
+
+# Fetch overlay image
+overlay_file <- "../data/rj_overlay.png"
+
+get_arcgis_map_image(bbox, map_type = "World_Imagery", file = overlay_file,
+                     width = image_size$width, height = image_size$height, 
+                     sr_bbox = 4326)
+
+overlay_img <- png::readPNG(overlay_file)
+
+# Calculate rayshader layers
+watermap <- rayshader::detect_water(elev_matrix)
+
+# Plot 2D with texture
+elev_matrix |> 
+    rayshader::sphere_shade(texture = "imhof4") |> 
+    rayshader::add_water(watermap, color = "imhof4") |> 
+    rayshader::add_overlay(overlay_img, alphalayer = 0.5) |> 
+    rayshader::plot_map()
+```
+
+## `rayshader::` mapas em 3D
+
+```{r, eval=FALSE}
+#| echo: true
+
+# Plot 3D
+zscale <- 30
+rgl::clear3d()
+elev_matrix |> 
+    rayshader::sphere_shade(texture = "imhof4") |> 
+    rayshader::add_water(watermap, color = "imhof4") |> 
+    rayshader::add_overlay(overlay_img, alphalayer = .8) |> 
+    plot_3d(elev_matrix, zscale = zscale, windowsize = c(1500, 1200),
+            water = TRUE, soliddepth = -max(elev_matrix)/zscale, wateralpha = 1,
+            theta = 25, phi = 30, zoom = 0.65, fov = 60)
+rayshader::render_snapshot("../data/rj-3d.png")
+```
+
+```{r}
+magick::image_read("../data/rj-3d-editado.png")
+```
+
 
 ## `tensorflow::` deep learning
 
