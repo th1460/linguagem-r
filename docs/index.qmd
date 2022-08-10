@@ -1,5 +1,6 @@
 ---
 title: "Linguagem R"
+subtitle: "Além do #rstats"
 author: "Thiago Pires"
 format: 
   revealjs:
@@ -597,6 +598,35 @@ plumber::pr_run(plumber::pr("R/plumber.R"), host = "0.0.0.0", port = 8080)
 ] 
 ```
 
+## `quantmod::` preços de ações
+
+```{r eval=FALSE}
+#| echo: true
+
+dataStocks <- function(code, from, to) {
+    
+    stock <- 
+        quantmod::getSymbols(code, 
+                             src = "yahoo", 
+                             from = from, 
+                             to = to, 
+                             auto.assign = FALSE)
+    
+    stock <-
+        stock |>
+        as.data.frame() |> 
+        tibble::rownames_to_column(var = "Date") |> 
+        dplyr::as_tibble() |> 
+        dplyr::select(dplyr::matches("Date|Adjusted")) |> 
+        dplyr::mutate(Date = Date |> lubridate::as_date()) |> 
+        dplyr::rename(Adjusted = 2)
+    
+    return(stock)
+    
+}
+```
+
+
 ## `shiny::` criando aplicações web
 
 ```{r eval=FALSE}
@@ -616,11 +646,11 @@ server <- function(input, output, session) {
 shinyApp(ui, server)
 ```
 
-## `shiny::` obtendo preço de ações
+## `shiny::` app para obter preços de ações
 
 :::: columns
 ::: {.column width="45%"}
-![](resources/images/stock-price-app.png){width="70%"}
+![](resources/images/stock-price-app.png){width="80%"}
 :::
 ::: {.column width="55%"}
 ```{r eval=FALSE}
@@ -904,6 +934,28 @@ rayshader::render_snapshot("../data/rj-3d.png")
 magick::image_read("../data/rj-3d-editado.png")
 ```
 
+## `purrr::` programação funcional
+
+Fazendo loop com `for`
+
+```{r}
+#| echo: true
+
+x <- NULL
+for (i in 1:10) {
+    x <- c(x, i^2)
+}
+x
+```
+
+Fazendo loop com `map_dbl`
+
+```{r}
+#| echo: true
+
+1:10 |> 
+    purrr::map_dbl(\(x) x^2)
+```
 
 ## `tensorflow::` deep learning
 
