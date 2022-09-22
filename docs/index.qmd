@@ -15,7 +15,7 @@ format:
 
 ## Thiago Pires
 
-### Cientísta de Dados (CIO/IBM)
+### Cientista de Dados (CIO/IBM)
 
 :::: columns
 ::: {.column}
@@ -728,7 +728,7 @@ RUN R -e "install.packages(c('jsonlite', 'tidypredict', 'yaml', \
 Build
 
 ```
-podman build -t quay.io/th1460/titanic-classifier .
+podman build -t docker.io/th1460/titanic-classifier .
 ```
 
 Push para um registry
@@ -743,7 +743,7 @@ podman push docker.io/th1460/titanic-classifier
 :::: columns
 ::: {.column width="30%"}
 
-> IBM Cloud Functions service is an event-driven compute platform, also referred to as Serverless computing, or as Function as a Service (FaaS), that runs code in response to events or direct invocations.
+> O serviço IBM Cloud Functions é uma plataforma de computação orientada a eventos, também conhecida como computação sem servidor ou como Function-as-a-Service (FaaS), que executa código em resposta a eventos ou chamadas diretas.
 
 :::
 
@@ -846,7 +846,7 @@ results[c("Sex", "Pclass", "fit")] |>
 ```{r}
 #| echo: true
 
-# Load elevation data
+# Load elevation data (https://th1460.github.io/posts/2022/08/mapa-3d-com-rayshader/)
 elev_file <- "../data/rj.tif"
 elev_img <- raster::raster(elev_file)
 elev_matrix <- 
@@ -957,7 +957,574 @@ Fazendo loop com `map_dbl`
     purrr::map_dbl(\(x) x^2)
 ```
 
+## `keras::dataset_imdb()` mineração de texto
+
+Estruturando a base de dados
+
+```{r eval=FALSE}
+#| echo: true
+
+imdb <- keras::dataset_imdb(num_words = 10000)
+
+set.seed(1984)
+train_labels <- 
+    dplyr::tibble(y = imdb$train$y, id = 1:25000) |>  
+    dplyr::group_by(y) |> 
+    dplyr::sample_n(size = 5000) |> 
+    dplyr::ungroup()
+
+train_data <- 
+    train_labels |> 
+    dplyr::pull(id) |> 
+    purrr::map(~ imdb$train$x[[.x]])
+```
+
+## `keras::dataset_imdb_word_index()` mineração de texto
+
+Decodificando o review
+
+```{r eval=FALSE}
+#| echo: true
+
+word_index <- keras::dataset_imdb_word_index()
+reverse_word_index <- names(word_index)
+names(reverse_word_index) <- word_index
+
+decoded_review <- function(x) {sapply(train_data[[x]], function(index) {
+    word <- if (index >= 3) reverse_word_index[[as.character(index - 3)]]
+    if (!is.null(word)) word else "?"
+})}
+
+data_decoded_review <- 
+    seq(10000) |> 
+    purrr::map(~ decoded_review(.x))
+
+data_decoded_review <-
+    tibble::enframe(data_decoded_review,
+                    name = "index",
+                    value = "words")
+
+data_decoded_review <-
+    data_decoded_review |> 
+    dplyr::bind_cols(train_labels)
+
+data_decoded_review |> 
+    saveRDS("../data/data_decoded_review.RDS")
+
+```
+
+## `tidytext::` e `wordcloud::`
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig.width: 12
+#| fig.height: 11
+
+data_decoded_review <- readRDS("../data/data_decoded_review.RDS")
+
+set.seed(1984)
+data_decoded_review |> 
+    tidyr::unnest(words) |> 
+    dplyr::anti_join(tidytext::stop_words, by = c("words" = "word")) |> 
+    dplyr::filter(! words %in% c("?", "br", "1", "2", 
+                                 "3", "4", "7", "8", 
+                                 "9", "10")) |> 
+    dplyr::count(words, y, sort = TRUE) |> 
+    dplyr::mutate(y = ifelse(y == 0, "Negativo", "Positivo")) |> 
+    reshape2::acast(words ~ y, value.var = "n", fill = 0) |> 
+    wordcloud::comparison.cloud(colors = c("#E24664", "#1D6CE6"),
+                                max.words = 200,
+                                title.size = 4,
+                                scale = c(5, 2))
+```
+
 ## `tensorflow::` deep learning
+
+### Criando um modelo para avaliar se um review de filme é positivo ou negativo
+
+```{r eval=FALSE}
+#| echo: true
+
+imdb <- keras::dataset_imdb(num_words = 10000)
+
+set.seed(1984)
+train_labels <- 
+    dplyr::tibble(y = imdb$train$y, id = 1:25000) |>  
+    dplyr::group_by(y) |> 
+    dplyr::sample_n(size = 5000) |> 
+    dplyr::ungroup()
+
+train_data <- 
+    train_labels |> 
+    dplyr::pull(id) |> 
+    purrr::map(~ imdb$train$x[[.x]])
+
+saveRDS(list(data = train_data, 
+             labels = train_labels), "../data/train_imdb.RDS")
+
+test_labels <- 
+    dplyr::tibble(y = imdb$test$y, id = 1:25000) |>  
+    dplyr::group_by(y) |> 
+    dplyr::sample_n(size = 5000) |> 
+    dplyr::ungroup()
+
+test_data <- 
+    test_labels |> 
+    dplyr::pull(id) |> 
+    purrr::map(~ imdb$test$x[[.x]])
+
+saveRDS(list(data = test_data, 
+             labels = test_labels), "../data/test_imdb.RDS")
+```
+
+## `tensorflow::` deep learning
+
+### Função para Tranformando os reviews (inputs) em um vetor de 0s e 1s
+
+```{r}
+#| echo: true
+
+vectorize_sequences <- function(sequences, dimension = 10000) {
+    # Creates an all-zero matrix of shape (length(sequences), dimension)
+    results <- matrix(0, nrow = length(sequences), ncol = dimension) 
+    for (i in 1:length(sequences))
+        # Sets specific indices of results[i] to 1s
+        results[i, sequences[[i]]] <- 1 
+    results
+}
+```
+
+```{r eval=FALSE}
+#| echo: true
+
+train_imdb <- readRDS("../data/train_imdb.RDS")
+test_imdb <- readRDS("../data/test_imdb.RDS")
+
+# tranformando os reviews (inputs) em um vetor de 0s e 1s
+x_train <- vectorize_sequences(train_imdb$data)
+x_test <- vectorize_sequences(test_imdb$data)
+# transformando os outpus em numérico
+y_train <- as.numeric(train_imdb$labels |> pull(y))
+y_test <- as.numeric(train_imdb$labels |> pull(y))
+```
+
+## `tensorflow::` deep learning
+
+### Estrutura da rede
+
+```{r}
+#| echo: true
+DiagrammeR::grViz("resources/images/mlp.gv")
+```
+
+## `tensorflow::` deep learning
+
+### Construindo a rede
+
+```{r eval=FALSE}
+#| echo: true
+
+model <- keras::keras_model_sequential() |> 
+    keras::layer_dense(units = 10, activation = "relu", input_shape = c(10000)) |> 
+    keras::layer_dense(units = 10, activation = "relu") |> 
+    keras::layer_dense(units = 1, activation = "sigmoid")
+```
+
+### Treinamento
+
+```{r eval=FALSE}
+#| echo: true
+
+model |> keras::compile(
+    optimizer = "rmsprop",
+    loss = "binary_crossentropy",
+    metrics = c("accuracy")
+)
+model |> keras::fit(x_train, y_train, epochs = 4, batch_size = 512)
+```
+
+### Avaliando o modelo
+
+```{r eval=FALSE}
+#| echo: true
+
+(results <- model |> keras::evaluate(x_test, y_test))
+```
+
+```
+    loss accuracy 
+0.350753 0.870200 
+```
+
+### Salvando o modelo
+
+```{r eval=FALSE}
+#| echo: true
+
+model |> keras::export_savedmodel("../data/savedmodel")
+```
+
+## `tensorflow::` deep learning
+
+### Classificando um review
+
+```{r}
+#| echo: true
+#| output-location: column
+
+# codificação
+coded_review <- function(review){
+    
+    word_index <- keras::dataset_imdb_word_index()
+    reverse_word_index <- unlist(word_index)
+    
+    words <-
+        (review |> 
+             tolower() |> 
+             strsplit(split = " "))[[1]] |> 
+        gsub("[!,:]", "", x = _)
+    
+    index <- reverse_word_index[names(reverse_word_index) %in% words]
+    
+    return(list(as.numeric(index) + 3))
+    
+}
+
+(exemplo1 <- 
+  "The film is best, great, beautiful and wonderful!" |>  
+  coded_review()) |> str()
+
+# vetorização
+(exemplo_vector1 <- vectorize_sequences(exemplo1)) |> str()
+
+# classificação
+exemplo_vector1 |> 
+  tfdeploy::predict_savedmodel("../data/savedmodel")
+
+```
+
+## Problema de otimização de rota de frota
+
+### Mapa do centro de Campinas SP
+
+```{r}
+#| echo: true
+#| output-location: column
+
+bbox <- list(
+    p1 = list(long = -47.0708, lat = -22.9075),
+    p2 = list(long = -47.0348, lat = -22.8804)
+)
+
+leaflet::leaflet() |> 
+    leaflet::addTiles()|> 
+    leaflet::addRectangles(
+        lng1 = bbox$p1$long, lat1 = bbox$p1$lat,
+        lng2 = bbox$p2$long, lat2 = bbox$p2$lat,
+        fillColor = "transparent"
+    ) |> 
+    leaflet::fitBounds(
+        lng1 = bbox$p1$long, lat1 = bbox$p1$lat,
+        lng2 = bbox$p2$long, lat2 = bbox$p2$lat,
+    )
+```
+
+## Vias como linhas baseado no `osmdata`
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 6
+#| fig-width: 6
+
+if (!exists("has_internet_via_proxy")) {
+    assign("has_internet_via_proxy", TRUE, environment(curl::has_internet))   
+}
+
+# Consulta
+query <- osmdata::opq(bbox =  unlist(bbox)) |> 
+    osmdata::add_osm_feature(key = "highway") |> 
+    osmdata::osmdata_sf()
+
+# Retornando linhas
+query_lines <- query$osm_lines
+
+# Visualizando o objeto
+query_lines |> 
+    sf::st_geometry() |> 
+    ggplot2::ggplot() +
+    ggplot2::geom_sf(colour = "gray") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(text = element_text(size = 15))
+
+```
+
+## Convertendo as vias em um objeto `sfnetwork`
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 6
+#| fig-width: 6
+
+poly_to_lines <- sf::st_cast(query$osm_polygons, "LINESTRING")
+
+query_lines <- dplyr::bind_rows(query_lines, poly_to_lines)
+
+highway_net <- sfnetworks::as_sfnetwork(query_lines, directed = FALSE)
+
+# Remove nodes that have only two edges connected
+highway_simple <- tidygraph::convert(highway_net, sfnetworks::to_spatial_smooth)
+
+# Filter connected components
+connected_net <- highway_simple |> 
+    tidygraph::activate("nodes") |> 
+    dplyr::filter(tidygraph::group_components() == 1)
+
+# Plot
+ggplot2::ggplot() +
+    ggplot2::geom_sf(data = sf::st_as_sf(connected_net, "edges"), col = "gray") +
+    ggplot2::geom_sf(data = sf::st_as_sf(connected_net, "nodes"), col = "gray") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(text = element_text(size = 15))
+
+```
+
+## Problema de otimização de rota de frota
+
+São 3 veículos e preciso selecionar a melhor rota. Eles devem sair e retornar a um depósito.
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 7
+#| fig-width: 7
+
+set.seed(711)
+index_visits <- sample(1:603, 9)
+visits <- connected_net |> 
+    tidygraph::activate("nodes") |> 
+    dplyr::slice(index_visits)
+
+depot <- connected_net |> 
+    tidygraph::activate("nodes") |> 
+    dplyr::slice(23)
+
+ggplot2::ggplot() + 
+    ggplot2::geom_sf(data = sf::st_as_sf(connected_net, "edges"), col = "gray") +
+    ggplot2::geom_sf(data = sf::st_as_sf(connected_net, "nodes"), col = "gray") +
+    ggplot2::theme_minimal() +
+    ggplot2::theme(text = element_text(size = 15)) +
+    ggplot2::geom_sf(data = sf::st_as_sf(visits, "nodes"), 
+                     ggplot2::aes(col = "Visits"), size = 6) +
+    ggplot2::geom_sf(data = sf::st_as_sf(depot, "nodes"), 
+                     ggplot2::aes(col = "Depot"), size = 6) +
+    ggplot2::labs(x = "", y = "", colour = "") +
+    ggplot2::scale_color_manual(values = c("Visits" = "blue", 
+                                           "Depot" = "orange"))
+
+```
+
+## Problema de otimização de rota de frota
+
+Cálculo da matriz de custo
+
+```{r}
+#| echo: true
+#| output-location: column
+
+connected_net <- 
+    connected_net |> 
+    tidygraph::activate("edges") |> 
+    dplyr::mutate(weight = sfnetworks::edge_length())
+
+cost_matrix_route_problem <- 
+    sfnetworks::st_network_cost(connected_net, 
+                                from = c(23, index_visits), 
+                                to = c(23, index_visits), 
+                                weights = "weight")
+
+mode(cost_matrix_route_problem) <- "integer"
+
+cost_matrix_route_problem
+```
+
+## Problema de otimização de rota de frota utilizando `ortools` e `reticulate::`
+
+:::: columns
+::: {.column}
+```{r eval=FALSE}
+#| echo: true
+
+reticulate::use_virtualenv("../venv", required = TRUE)
+constraint_solver <- reticulate::import("ortools.constraint_solver")
+
+# Create data
+create_data_model <- function() {
+    
+    data <- reticulate::dict()
+    data['distance_matrix'] <- cost_matrix_route_problem
+    data['distance_matrix'] <-  data['distance_matrix']$tolist()
+    data['num_vehicles'] <- 3L
+    data['depot'] <- 0L
+    
+    return(data)
+    
+}
+
+# Create the routing model
+data <- create_data_model()
+manager <- constraint_solver$pywrapcp$RoutingIndexManager(
+    length(data['distance_matrix']),
+    data['num_vehicles'],
+    data['depot']
+)
+
+routing <- constraint_solver$pywrapcp$RoutingModel(manager)
+
+# Create the distance callback
+distance_callback <- function(from_index, to_index) {
+    
+    from_node <- manager$IndexToNode(from_index)
+    to_node <- manager$IndexToNode(to_index)
+    
+    return(data['distance_matrix'][from_node][to_node])
+    
+}
+
+transit_callback_index <- routing$RegisterTransitCallback(distance_callback)
+
+# Set the cost of travel
+routing$SetArcCostEvaluatorOfAllVehicles(transit_callback_index)
+
+# Add a distance dimension
+dimension_name <- 'Distance'
+routing$AddDimension(
+    transit_callback_index,
+    0L,  # no slack
+    15000L,  # vehicle maximum travel distance
+    TRUE,  # start cumul to zero
+    dimension_name)
+
+distance_dimension <- routing$GetDimensionOrDie(dimension_name)
+distance_dimension$SetGlobalSpanCostCoefficient(100L)
+
+# Set search parameters
+search_parameters <- constraint_solver$pywrapcp$DefaultRoutingSearchParameters()
+search_parameters$first_solution_strategy = (
+    constraint_solver$routing_enums_pb2$FirstSolutionStrategy$PATH_CHEAPEST_ARC)
+
+solution <- routing$SolveWithParameters(search_parameters)
+
+# Save routes to a list or array
+get_routes <- function(solution, routing, manager) {
+    
+    routes <- list()
+    
+    for (route_nbr in seq(0, routing$vehicles() - 1)) {
+        
+        index <- routing$Start(route_nbr)
+        route <- c(manager$IndexToNode(index))
+        
+        while(!routing$IsEnd(index)) {
+            
+            index <- solution$Value(routing$NextVar(index))
+            route <- append(route, manager$IndexToNode(index))
+            
+        }
+        
+        routes[[route_nbr + 1]] <- route
+        names(routes)[route_nbr + 1] <- route_nbr
+        
+    }
+    
+    return(routes)
+    
+}
+
+(routes <- get_routes(solution, routing, manager))
+```
+:::
+::: {.column}
+```
+$`0`
+[1] 0 6 9 0
+
+$`1`
+[1] 0 3 2 5 0
+
+$`2`
+[1] 0 7 1 8 4 0
+```
+:::
+::::
+
+## Problema de otimização de rota de frota
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 8
+#| fig-width: 8
+
+real_routes <- lapply(readRDS("../data/routes.RDS"), \(x) c(23, index_visits)[x + 1])
+
+vrp_paths <- function(x) {
+    
+    results <- list()
+    for (i in seq(length(x))) {
+        
+        from_idxs <- unique(x[[i]])
+        to_idxs <- c(from_idxs[2:length(from_idxs)], from_idxs[1])
+        
+        paths <- mapply(sfnetworks::st_network_paths,
+                        from = from_idxs,
+                        to = to_idxs,
+                        MoreArgs = list(x = connected_net, weights = "weight"))    
+        
+        results[[i]] <- paths
+    }
+    
+    return(results)
+    
+}
+
+# Plot results
+vrp_paths_fun <- function(x, index, vehicle) {
+    
+    vrp_edge_paths <- connected_net |> 
+        tidygraph::activate("edges") |> 
+        dplyr::slice(vrp_paths(x)[[vehicle]][, index]$edge_paths |> unlist())
+    
+    ggplot2::geom_sf(data = sf::st_as_sf(vrp_edge_paths, "edges"),
+                     ggplot2::aes(col = as.character(vehicle)), lwd = 1.3)
+    
+}
+
+p <- ggplot2::ggplot() +
+    ggplot2::geom_sf(data = sf::st_as_sf(connected_net, "edges"), col = "gray") +
+    ggplot2::geom_sf(data = sf::st_as_sf(connected_net, "nodes"), col = "gray") +
+    ggplot2::theme_minimal()
+
+for (j in seq(length(real_routes))) {
+    for (i in seq(length(real_routes[[j]]) - 1)) {
+        p <- p + vrp_paths_fun(real_routes, i, j)   
+    }
+}
+
+p <- p + ggplot2::geom_sf(data = sf::st_as_sf(visits, "nodes"), 
+                     ggplot2::aes(col = "Visits"), size = 6) +
+    ggplot2::geom_sf(data = sf::st_as_sf(depot, "nodes"), 
+                     ggplot2::aes(col = "Depot"), size = 6) +
+    ggplot2::labs(x = "", y = "", colour = "") +
+    ggplot2::theme(text = element_text(size = 15))
+
+plotly::ggplotly(p, tooltip = "") |> 
+    plotly::layout(modebar = list(orientation = "v"))
+
+```
+
 
 ## Linguagem R testada com outros recursos da IBM Cloud
 
@@ -973,4 +1540,5 @@ Fazendo loop com `map_dbl`
 <ul>
 <li>Autenticação de aplicações shiny com App ID: [github.com/IBM/AppIdR](https://github.com/IBM/AppIdR)</li>
 <li>Autenticação de aplicações shiny com W3ID: [github.ibm.com/Thiago-Pires/w3idr](https://github.ibm.com/Thiago-Pires/w3idr)</li>
+<li>Carbon Design System em Shiny apps: [github.com/th1460/shiny-carbon-web](https://github.com/th1460/shiny-carbon-web)</li>
 </ul>

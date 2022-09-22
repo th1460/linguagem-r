@@ -1,0 +1,82 @@
+digraph G {
+
+        rankdir=LR
+        splines=line
+        tooltip="Estrutura"
+        
+        node [fixedsize=true,label=""];
+
+        subgraph cluster_0 {
+		color=white;
+		node [style=solid,color=blue4,shape=circle];
+		x1 x2 x3[label="...",shape=none] x4;
+		label = "10.000 palavras \n (input)";
+	}
+
+	subgraph cluster_1 {
+		color=white;
+		node [style=solid,color=red2,shape=circle];
+		a12 a22 a32[label="...",shape=none] a42;
+		label = "Camada \n oculta";
+	}
+	
+	subgraph cluster_2 {
+		color=white;
+		node [style=solid,color=red2,shape=circle];
+		a13 a23 a33[label="...",shape=none] a43;
+		label = "Camada \n oculta";
+	}
+
+	subgraph cluster_3 {
+		color=white;
+		node [style=solid,color=seagreen2,shape=circle];
+		O;
+		label="Classificação \n (output)";
+	}
+
+        x1 -> a12;
+        x1 -> a22;
+        x1 -> a32;
+        x1 -> a42;
+        
+        x2 -> a12;
+        x2 -> a22;
+        x2 -> a32;
+        x2 -> a42;
+        
+        x3 -> a12;
+        x3 -> a22;
+        x3 -> a32;
+        x3 -> a42;
+        
+        x4 -> a12;
+        x4 -> a22;
+        x4 -> a32;
+        x4 -> a42;
+        
+        a12 -> a13;
+        a12 -> a23;
+        a12 -> a33;
+        a12 -> a43;
+        
+        a22 -> a13;
+        a22 -> a23;
+        a22 -> a33;
+        a22 -> a43;
+        
+        a32 -> a13;
+        a32 -> a23;
+        a32 -> a33;
+        a32 -> a43;
+        
+        a42 -> a13;
+        a42 -> a23;
+        a42 -> a33;
+        a42 -> a43;
+
+        a13 -> O;
+        a23 -> O;
+        a33 -> O;
+        a43 -> O;
+
+}
