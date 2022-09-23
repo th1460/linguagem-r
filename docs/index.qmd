@@ -401,7 +401,25 @@ dplyr::tbl(db2, "COVID19") |>
     dplyr::select(COUNTRY, DATE, VALUE)
 ```
 
+## `DBI::`, `RJDBC::` e `dbplyr::` conectando com o DB2 na IBM Cloud
+
+```{r}
+#| echo: true
+#| output-location: column
+
+dplyr::tbl(db2, "COVID19") |> 
+    dplyr::filter(dplyr::between(DATE, 
+                                 "2022-06-07", 
+                                 "2022-06-15")) |> 
+    dplyr::select(COUNTRY, DATE, VALUE) |> 
+    dplyr::show_query()
+```
+
+
 ## `tidymodels::` aprendizado supervisionado
+
+:::: columns
+::: {.column}
 
 ```{r}
 #| echo: true
@@ -411,8 +429,10 @@ set.seed(555)
 
 titanic <- 
     titanic::titanic_train |> 
-    dplyr::mutate(Pclass = factor(Pclass, labels = c("1st", "2nd", "3rd")),
-                  Survived = factor(Survived, labels = c("não", "sim")))
+    dplyr::mutate(Pclass = relevel(factor(Pclass, labels = c("1st", "2nd", "3rd")),
+                                   ref = "3rd"),
+                  Survived = factor(Survived, labels = c("não", "sim")),
+                  Sex = factor(Sex, levels = c("male", "female")))
 
 # Separar 3/4 dos dados para treino 
 data_split <- 
@@ -430,8 +450,17 @@ lr_fit <-
     lr_mod |>  
     fit(Survived ~ Sex + Pclass, data = train_data)
 
-lr_fit |> broom::tidy()
+lr_fit |> broom::tidy() |> dplyr::mutate(exp(estimate))
 ```
+:::
+::: {.column}
+<ul>
+<li>A chance de uma mulher sobreviver é 15 vezes a chance de um homem sobreviver</li>
+<li>A chance de uma pessoa da 1st classe sobreviver é 7 vezes a chance de um pessoa da 3rd classe sobreviver</li>
+<li>A chance de uma pessoa da 2nd classe sobreviver é 3 vezes a chance de um pessoa da 3rd classe sobreviver</li>
+</ul>
+:::
+::::
 
 ## `tidymodels::` visualizando o modelo
 
@@ -626,6 +655,82 @@ dataStocks <- function(code, from, to) {
 }
 ```
 
+## `gtrendsR::` Google trends
+
+```{r}
+#| echo: true
+#| output-location: column
+#| fig-height: 8
+#| fig-width: 9
+
+dataStocks <- function(code, from, to) {
+    
+    stock <- 
+        quantmod::getSymbols(code, 
+                             src = "yahoo", 
+                             from = from, 
+                             to = to, 
+                             auto.assign = FALSE)
+    
+    stock <-
+        stock |>
+        as.data.frame() |> 
+        tibble::rownames_to_column(var = "Date") |> 
+        dplyr::as_tibble() |> 
+        dplyr::select(dplyr::matches("Date|Adjusted")) |> 
+        dplyr::mutate(Date = Date |> lubridate::as_date()) |> 
+        dplyr::rename(Adjusted = 2)
+    
+    return(stock)
+    
+}
+
+dataGtrends <- function(query, from, to) {
+    
+    data_gtrends <- 
+        gtrendsR::gtrends(keyword = c(query),
+                          geo = "BR", 
+                          time = glue::glue("{from} {to}"), 
+                          onlyInterest = TRUE)
+    
+    data_gtrends$interest_over_time |> 
+        dplyr::as_tibble() |> 
+        dplyr::mutate(Date = date |> lubridate::as_date()) |> 
+        dplyr::select(Date, Hits = hits)
+}
+
+plotStocksGtrends <- function(stock, query, from, to) {
+    
+    data_stocks <- dataStocks(stock, from, to)
+    data_gtrends <- dataGtrends(query, from, to)
+    
+    coeff <- 50/data_stocks$Adjusted |> mean(na.rm = TRUE)
+    
+    data_stocks |>
+        dplyr::mutate(Week = Date |> lubridate::week()) |> 
+        dplyr::left_join(
+            data_gtrends |> 
+                dplyr::mutate(Week = Date |> lubridate::week()) |> 
+                dplyr::select(Week, Hits), by = "Week"
+        ) |> 
+        
+        ggplot2::ggplot(ggplot2::aes(x = Date)) +
+        
+        ggplot2::geom_smooth(ggplot2::aes(y = Adjusted, colour = "Stock Price")) + 
+        ggplot2::geom_line(ggplot2::aes(y = Adjusted), colour = "gray") +
+        ggplot2::geom_smooth(ggplot2::aes(y = Hits / coeff, colour = "Google Trends")) +
+        
+        ggplot2::scale_y_continuous(
+            name = "Adjusted Price",
+            sec.axis = ggplot2::sec_axis(~.*coeff, name = "Hits")) + 
+        ggplot2::theme_minimal() +
+        ggplot2::labs(colour = "") +
+        ggplot2::theme(text = element_text(size = 20))
+    
+}
+
+plotStocksGtrends("PETR4.SA", "Petrobras", "2020-10-05", "2021-10-05")
+```
 
 ## `shiny::` criando aplicações web
 
@@ -1542,3 +1647,16 @@ plotly::ggplotly(p, tooltip = "") |>
 <li>Autenticação de aplicações shiny com W3ID: [github.ibm.com/Thiago-Pires/w3idr](https://github.ibm.com/Thiago-Pires/w3idr)</li>
 <li>Carbon Design System em Shiny apps: [github.com/th1460/shiny-carbon-web](https://github.com/th1460/shiny-carbon-web)</li>
 </ul>
+
+![](resources/images/carbon-design.png){width="60%"}
+
+## Obrigado
+
+### Contato
+
+[th1460.github.io](https://th1460.github.io/)<br>
+[github.com/th1460](https://github.com/)<br>
+[medium.com/@thopr](https://medium.com/@thopr)<br>
+[linkedin.com/in/thop](https://www.linkedin.com/in/thop)<br><br>
+
+slack: @thop
